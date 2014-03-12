@@ -86,4 +86,5 @@ Cool eh?
   `-O` OUT, `--outfile`=OUT specify a message file destination  
   `-s`, `--secret` Set the secret used for the AES encryption
 
+[Blog Entry](http://theninjabag.net/blog/blog/2014/03/11/dnsfilexfer-yet-another-take-on-file-transfer-via-dns/)  
 Contact: [@leonjza](https://twitter.com/leonjza)
