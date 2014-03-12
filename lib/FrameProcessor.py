@@ -1,18 +1,26 @@
 import hashlib
+from Crypto.Cipher import AES
+from Crypt import CryptString
 
-class ProcessFrame(object):
+class ProcessFrame():
 
 	def __init__(self):
 		self.position = 0
 		self.expected = 0
 		self.framestore = []
 		self.out_file = ''
+		self.secret = None
+		self.encrypted = False
 
 	def setOutfile(self, out_file):
 		self.out_file = out_file
 
 	def setData(self, frame):
 		self.frame = frame
+
+	def setSecret(self, secret):
+		if secret:
+			self.secret = secret
 
 	def process(self):
 		print '[INFO] Processing frame', self.frame
@@ -43,6 +51,18 @@ class ProcessFrame(object):
 				print '[OK] Message seems to be intact and passes sha1 checksum of', self.checksum
 				print '[OK] Message was received in', self.expected + 2, 'requests'
 
+				# check if self.encrypted & if a key is available.
+				# if so, decrypt combined_payloads
+				if self.encrypted:
+					if not self.secret:
+						print '[CRITICAL] Message is encrypted, but no secret is available. Set one with `-s`'
+						return
+
+					# decrypt the message
+					d = CryptString(self.secret)
+					combined_payloads = d.decode(combined_payloads)
+					print '[INFO] Message has been decrypted with the configured secret'
+
 				# if we need to write this too a file, do it
 				if self.out_file:
 					print '[OK] Writing contents to', self.out_file
@@ -69,6 +89,11 @@ class ProcessFrame(object):
 		if frame_pos == 0:
 			# split by : and and get the number of extected frames, minus this one
 			self.expected = int(self.frame.split(':')[0])
+
+			# check if the received message will be encrypted
+			if int((self.frame.split(':')[1])[:1]) == 1:
+				self.encrypted = True
+
 			self.position = 0
 			self.framestore = []
 			return

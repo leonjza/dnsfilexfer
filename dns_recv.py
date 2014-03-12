@@ -1,16 +1,21 @@
 import socket
 import optparse
+import getpass
 from lib.FrameProcessor import ProcessFrame
 
-def main(ip, port, out_file):	
+def main(ip, port, out_file, secret):
 
 	# setup the socket
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	sock.bind((ip, port))
 
-	print '[INFO] Fake DNS server listening on port', ip, 'on', port
-
 	frameHandler = ProcessFrame()
+
+	# Set the secret if we have one configured
+	if secret:
+		frameHandler.setSecret(secret)
+
+	print '[INFO] Fake DNS server listening on port', ip, 'on', port, 'with a configured secret.' if secret else ''
 
 	# if we have a file destination to write to, set it
 	if out_file:
@@ -77,15 +82,22 @@ if __name__ == '__main__':
 						type='int', help='port number to listen on (Defaults: 53)')
 	parser.add_option('-O', '--outfile', dest='out', default='',
 						type='string', help='specify a message file destination')
+	parser.add_option('-s', '--secret', dest='secret', default=False,
+						action='store_true', help='Set the secret used for the AES encryption')
 
 	(options, args) = parser.parse_args()
 
 	if not options.listen:
 		parser.error('At least a listening IP must be provided.')
 
+	if options.secret:
+		secret = getpass.getpass(prompt='What is the secret? ')
+	else:
+		secret = None
+
 	listening_ip = options.listen
 	listening_port = options.port
 	out_file = options.out
 
 	# kick off the main loop
-	main(listening_ip, listening_port, out_file)
+	main(listening_ip, listening_port, out_file, secret)

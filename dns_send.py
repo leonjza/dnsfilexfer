@@ -1,6 +1,8 @@
 import dns.resolver
 import hashlib
 import optparse
+import getpass
+from lib.Crypt import CryptString
 
 PAYLOADS_LENGTH = 60
 FAKE_DOMAIN = 'fake.io'
@@ -8,12 +10,18 @@ FAKE_DOMAIN = 'fake.io'
 # Change payload length to allow for a iterator
 PAYLOADS_LENGTH = PAYLOADS_LENGTH - 4
 
-def main(ip, file, identifier, xxd):
+def main(ip, file, identifier, xxd, secret):
 
 	with open(file) as to_send:
 		MESSAGE = to_send.readlines()
 
 	MESSAGE = ''.join(MESSAGE)
+
+	# based on if we have a secret, we will AES crypt it with it
+	if secret:
+		c = CryptString(secret)
+		MESSAGE = c.encode(MESSAGE)
+		print '[INFO] Message is encypted with the secret'
 
 	print '---START OF MESSAGE---'
 	print MESSAGE
@@ -46,7 +54,7 @@ def main(ip, file, identifier, xxd):
 		payloads = [''.join(MESSAGE.encode('hex')[i:i+PAYLOADS_LENGTH]) for i in range(0, len(MESSAGE.encode('hex')), PAYLOADS_LENGTH)]
 
 		# prepare the first, control payload explaining how many messages to expect...
-		handshake = ('0000'+str(len(payloads) + 2 )+':').ljust(PAYLOADS_LENGTH, '0')
+		handshake = ('0000'+str(len(payloads) + 2 ) + ':' + ('1' if secret else '0')).ljust(PAYLOADS_LENGTH, '0')
 
 		# ...a message identifier...
 		identifier = ('0001'+(identifier.encode('hex'))).ljust(PAYLOADS_LENGTH, '0')
@@ -90,6 +98,8 @@ if __name__ == '__main__':
 						type='string', help='specify a message indentifier')
 	parser.add_option('-X', '--xxd', dest='xxd', default=False,
 						action='store_true', help='Enable questions to be `xxd -r` friendly (60 chars long)')
+	parser.add_option('-s', '--secret', dest='secret', default=False,
+						action='store_true', help='Set the secret used for the AES encryption')
 
 	(options, args) = parser.parse_args()
 
@@ -102,10 +112,15 @@ if __name__ == '__main__':
 	if len(options.ident.encode('hex')) > PAYLOADS_LENGTH - 4:
 		parser.error('The message identifier is too long.')
 
+	if options.secret:
+		secret = getpass.getpass(prompt='What is the secret? ')
+	else:
+		secret = None
+
 	server_ip = options.server
 	file = options.file
 	identifier = options.ident
 	xxd = options.xxd
 
 	# kick off the main loop
-	main(server_ip, file, identifier, xxd)
+	main(server_ip, file, identifier, xxd, secret)
