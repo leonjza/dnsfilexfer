@@ -15,7 +15,7 @@ def main(ip, port, out_file, secret):
 	if secret:
 		frameHandler.setSecret(secret)
 
-	print '[INFO] Fake DNS server listening on port', ip, 'on', port, 'with a configured secret.' if secret else ''
+	print '[INFO] Fake DNS server listening on', ip, '/', port, 'with a configured secret.' if secret else ''
 
 	# if we have a file destination to write to, set it
 	if out_file:
