@@ -1,4 +1,5 @@
 import hashlib
+import os.path
 from Crypto.Cipher import AES
 from Crypt import CryptString
 
@@ -11,6 +12,7 @@ class ProcessFrame():
 		self.out_file = ''
 		self.secret = None
 		self.encrypted = False
+		self.identifier = None
 
 	def setOutfile(self, out_file):
 		self.out_file = out_file
@@ -66,8 +68,22 @@ class ProcessFrame():
 				# if we need to write this too a file, do it
 				if self.out_file:
 					print '[OK] Writing contents to', self.out_file
-					with open(self.out_file,'w') as f:
+
+					# check if self.out_file already exists.
+					if os.path.isfile(self.out_file):
+						print '[INFO]', self.out_file, 'already exists.'
+
+						if self.identifier:
+							self.out_file = self.out_file + '-' + self.identifier
+						else:
+							self.out_file = self.out_file + '-' + self.checksum[:8]
+
+					# open the file and write the message
+					print '[INFO] Writing to', repr(os.path.abspath(self.out_file))
+
+					with open(os.path.abspath(str(self.out_file)),'w') as f:
 						f.write(combined_payloads)
+
 					print '[OK] Done writing contents to', self.out_file
 
 				# else, just print it
@@ -96,10 +112,18 @@ class ProcessFrame():
 
 			self.position = 0
 			self.framestore = []
+			self.encrypted = False
+			self.identifier = None
 			return
 
+		# set the identifier and stip null bytes \x00
 		if frame_pos == 1:
-			self.identifier = self.frame[4:].decode('hex')
+			ident = (self.frame[4:].decode('hex')).split(b'\0',1)[0]
+			if ident == 'None':
+				self.identifier = None
+				return
+
+			self.identifier = ident
 			return
 
 		# get the sha1hash of the end message we will be getting
