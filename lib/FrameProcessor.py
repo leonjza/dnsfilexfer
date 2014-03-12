@@ -112,7 +112,6 @@ class ProcessFrame():
 
 			self.position = 0
 			self.framestore = []
-			self.encrypted = False
 			self.identifier = None
 			return
 
