@@ -1,8 +1,11 @@
 from Crypto.Cipher import AES
+from Crypto.Hash import HMAC
+from Crypto.Hash import SHA256
+from Crypto import Random
 import base64
  
 # the block size for the cipher object; must be 16, 24, or 32 for AES
-BLOCK_SIZE = 32
+BLOCK_SIZE = 16
  
 # the character used for padding--with a block cipher such as AES, the value
 # you encrypt must be a multiple of BLOCK_SIZE in length.  This character is
@@ -12,22 +15,41 @@ PADDING = '{'
 # one-liner to sufficiently pad the text to be encrypted
 pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
  
-# one-liners to encrypt/encode and decrypt/decode a string
-# encrypt with AES, encode with base64
-EncodeAES = lambda c, s: base64.b64encode(c.encrypt(pad(s)))
-DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING)
- 
 class CryptString():
+	"""Encryption with AES-128 in CBC mode and random IV plus HMAC-SHA256
+	authentication with encrypt-then-MAC method."""
 
 	def __init__(self, secret):
 		# pad the secret to match our block size
 		self.secret = secret.ljust(BLOCK_SIZE, PADDING)
-		# set the cipher Object
-		self.cipher = AES.new(self.secret)
+		# RNG
+		self.rng = Random.new()
 
 	def encode(self, string):
-		return EncodeAES(AES.new(self.secret), string)
+		iv = self.rng.read(BLOCK_SIZE)
+		mac = HMAC.new(self.secret, digestmod=SHA256.new())
+		cipher = AES.new(self.secret, AES.MODE_CBC, iv)
+
+		ctext = cipher.encrypt(pad(string))
+		mac.update(ctext + iv + self.secret)
+		auth = mac.digest()
+		return base64.b64encode(iv + auth + ctext)
 
 	def decode(self, string):
-		return DecodeAES(AES.new((self.secret)), string)
+		if len(string) < (BLOCK_SIZE * 2 + 32):
+			return None
 
+		data = base64.b64decode(string)
+		iv = data[0:BLOCK_SIZE]
+		auth = data[BLOCK_SIZE:BLOCK_SIZE+32]
+		ctext = data[BLOCK_SIZE+32:]
+		cipher = AES.new(self.secret, AES.MODE_CBC, iv)
+		mac = HMAC.new(self.secret, digestmod=SHA256.new())
+
+		mac.update(ctext + iv + self.secret)
+		auth_c = mac.digest()
+		if auth_c != auth:
+			return None
+
+		ptext = cipher.decrypt(ctext).rstrip(PADDING)
+		return ptext

@@ -63,6 +63,10 @@ class ProcessFrame():
 					# decrypt the message
 					d = CryptString(self.secret)
 					combined_payloads = d.decode(combined_payloads)
+					if not combined_payloads:
+						print '[ERROR] Encrypted message failed to decode'
+						return
+
 					print '[INFO] Message has been decrypted with the configured secret'
 
 				# if we need to write this too a file, do it
