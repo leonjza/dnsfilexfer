@@ -6,7 +6,7 @@ Just some code to xfer files via DNS lookups. Supports encrypting the on the wir
 Clone the repo, and install the dependencies as put out in `requirements.txt`:
 
 ```
-% git clone https://github.com/th3l33k/dnsfilexfer.git
+% git clone https://github.com/leonjza/dnsfilexfer.git
 % cd dnsfilexfer
 % sudo pip install -r requirements.txt
 ```
