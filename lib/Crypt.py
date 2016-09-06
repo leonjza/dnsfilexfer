@@ -26,6 +26,7 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256
+from Crypto.Protocol.KDF import PBKDF2
 
 # the block size for the cipher object; must be 16, 24, or 32 for AES
 BLOCK_SIZE = 16
@@ -41,7 +42,8 @@ pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
 
 class CryptString:
     """Encryption with AES-128 in CBC mode and random IV plus HMAC-SHA256
-    authentication with encrypt-then-MAC method."""
+    authentication with encrypt-then-MAC method. The key material is derived
+    from a password with PBKDF2. Each message uses a newly derived key."""
 
     def __init__(self, secret):
         # pad the secret to match our block size
@@ -49,13 +51,22 @@ class CryptString:
         # RNG
         self.rng = Random.new()
 
+    def _gen_keys(self, salt):
+        keys = PBKDF2(self.secret, salt, BLOCK_SIZE * 2)
+        key_enc = keys[0:BLOCK_SIZE]
+        key_auth = keys[BLOCK_SIZE:]
+
+        return key_enc, key_auth
+
     def encode(self, string):
         iv = self.rng.read(BLOCK_SIZE)
-        mac = HMAC.new(self.secret, digestmod=SHA256.new())
-        cipher = AES.new(self.secret, AES.MODE_CBC, iv)
+
+        key_enc, key_auth = self._gen_keys(iv)
+        mac = HMAC.new(key_auth, digestmod=SHA256.new())
+        cipher = AES.new(key_enc, AES.MODE_CBC, iv)
 
         ctext = cipher.encrypt(pad(string))
-        mac.update(ctext + iv + self.secret)
+        mac.update(ctext + iv)
         auth = mac.digest()
         return base64.b64encode(iv + auth + ctext)
 
@@ -65,12 +76,13 @@ class CryptString:
 
         data = base64.b64decode(string)
         iv = data[0:BLOCK_SIZE]
-        auth = data[BLOCK_SIZE:BLOCK_SIZE + 32]
-        ctext = data[BLOCK_SIZE + 32:]
-        cipher = AES.new(self.secret, AES.MODE_CBC, iv)
-        mac = HMAC.new(self.secret, digestmod=SHA256.new())
+        auth = data[BLOCK_SIZE:BLOCK_SIZE+32]
+        ctext = data[BLOCK_SIZE+32:]
+        key_enc, key_auth = self._gen_keys(iv)
+        cipher = AES.new(key_enc, AES.MODE_CBC, iv)
+        mac = HMAC.new(key_auth, digestmod=SHA256.new())
 
-        mac.update(ctext + iv + self.secret)
+        mac.update(ctext + iv)
         auth_c = mac.digest()
         if auth_c != auth:
             return None
